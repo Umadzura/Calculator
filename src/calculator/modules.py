@@ -1,7 +1,7 @@
 from typing import Callable
 
 
-class ConversionToPostfix:
+class Conversion:
 
     def __init__(self):
         """Конструктор для инициализации переменных класса"""
@@ -12,7 +12,7 @@ class ConversionToPostfix:
         self.output = []
         self.precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '^': 3}
 
-    def isEmpty(self) -> bool:
+    def is_empty(self) -> bool:
         """Проверяет, пуст ли стек"""
         return True if self.top == -1 else False
 
@@ -22,7 +22,7 @@ class ConversionToPostfix:
 
     def pop(self) -> int | str:
         """Pop'ает элемент из стека"""
-        if not self.isEmpty():
+        if not self.is_empty():
             self.top -= 1
             return self.array.pop()
         else:
@@ -33,14 +33,14 @@ class ConversionToPostfix:
         self.top += 1
         self.array.append(op)
 
-    def isOperand(self, ch: str) -> bool:
+    def is_operand(self, ch: str) -> bool:
         """Вспомогательная функция для проверки, что задан символ - операнд"""
         try:
             return str(abs(int(ch))).isdigit()
         except ValueError:
             return False
 
-    def notGreater(self, i: int) -> bool:
+    def not_greater(self, i: int) -> bool:
         """Проверьте, строго ли приоритет оператора меньше вершины стека или нет."""
         try:
             a = self.precedence[i]
@@ -49,13 +49,13 @@ class ConversionToPostfix:
         except KeyError:
             return False
 
-    def infixToPostfix(self, exp: str) -> list:
+    def infix_to_postfix(self, exp: str) -> list:
         """Функция для перевода инфиксного выражения в постфиксное"""
 
         # Перебирает выражения для преобразования
         for i in exp.split():
             # Если символ является операндом, добавляет его в вывод
-            if self.isOperand(i):
+            if self.is_operand(i):
                 self.output.append(i)
 
             # Если символ представляет собой '(', поместите его в стек
@@ -65,22 +65,22 @@ class ConversionToPostfix:
             # Если отсканированный символ представляет собой ')',
             # извлекает его и выводит из стека до тех пор, пока не будет найден '('
             elif i == ')':
-                while (not self.isEmpty()) and self.peek() != '(':
+                while (not self.is_empty()) and self.peek() != '(':
                     a = self.pop()
                     self.output.append(a)
-                if not self.isEmpty() and self.peek() != '(':
+                if not self.is_empty() and self.peek() != '(':
                     return -1
                 else:
                     self.pop()
 
             # Встречается оператор
             else:
-                while not self.isEmpty() and self.notGreater(i):
+                while not self.is_empty() and self.not_greater(i):
                     self.output.append(self.pop())
                 self.push(i)
 
         # Вытаскивает весь оператор из стека
-        while not self.isEmpty():
+        while not self.is_empty():
             self.output.append(self.pop())
 
         # print("".join(self.output))
@@ -92,10 +92,11 @@ all_ops: dict[str, Callable[[list], int]] = {}
 
 def binary_op(token: str):
     """Декоратор для бинарных операций"""
+
     def make_binop(func: Callable[[int, int], int]) -> Callable[[list], int]:
         def redef(stack: list) -> int:
             if len(stack) < 2:
-                raise ValueError(f"Недостаточно операндов на стаке: len = {len(stack)}")
+                raise ValueError(f"Недостаточно операндов на стеке: len = {len(stack)}")
 
             b = stack.pop()
             a = stack.pop()
@@ -131,21 +132,17 @@ def div(a, b):
     return a // b
 
 
-@binary_op('%')
-def mod(a, b):
-    return a % b
-
-
 @binary_op('^')
 def power(a, b):
     return a ** b
 
 
-def execute_program(program: list) -> int:
+def calculate_postfix(program: list) -> int:
     stack = []
     for token in program:
         operation = all_ops.get(token, None)
         if operation is not None:
+
             operation(stack)
         else:
             try:
@@ -157,3 +154,60 @@ def execute_program(program: list) -> int:
         raise ValueError(f"Ошибка! К концу вычислений на стеке осталось не одно число: {stack}")
 
     return stack.pop()
+
+
+def print_options() -> None:
+    print('1. Перевод в постфиксную форму.')
+    print('2. Посчитать постфиксное выражение.')
+    print('3. Посчитать инфиксное выражение.')
+    print('4. Выход.')
+
+
+def get_valid_choice():
+    choice = input("Ваш выбор: ").strip()
+    while choice not in ["1", "2", "3", "4"]:
+        choice = input("Выберите легальное действие (1-4): ").strip()
+    print()
+    return choice
+
+
+def convert_to_postfix(exp: str) -> list:
+    obj = Conversion()
+    postfix = obj.infix_to_postfix(exp)
+    return postfix
+
+
+def get_valid_extension(func):
+    def wrapper():
+        choice = True
+        while choice:
+            try:
+                exp = input("Введите выражение: ")
+                func(exp)
+                print()
+                choice = False
+            except ValueError:
+                print("Проверьте корректность ввода")
+                print()
+
+    return wrapper
+
+
+@get_valid_extension
+def func1(exp):
+    postfix = convert_to_postfix(exp)
+    calculate_postfix(postfix)
+    print(' '.join(postfix))
+
+
+@get_valid_extension
+def func2(exp):
+    result = calculate_postfix(exp.split())
+    print(result)
+
+
+@get_valid_extension
+def func3(exp):
+    postfix = convert_to_postfix(exp)
+    result = calculate_postfix(postfix)
+    print(result)
