@@ -1,42 +1,47 @@
-class Conversion:
+from typing import Callable
 
-    # Конструктор для инициализации переменных класса
-    def __init__(self, capacity):
+
+class ConversionToPostfix:
+
+    def __init__(self):
+        """Конструктор для инициализации переменных класса"""
         self.top = -1
-        self.capacity = capacity
         # Этот массив используется в стеке
         self.array = []
         # Настройка приоритета
         self.output = []
         self.precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '^': 3}
 
-    # Проверяет, пуст ли стек
-    def isEmpty(self):
+    def isEmpty(self) -> bool:
+        """Проверяет, пуст ли стек"""
         return True if self.top == -1 else False
 
-    # Возвращает значение вершины стека
-    def peek(self):
+    def peek(self) -> int | str:
+        """Возвращает значение вершины стека"""
         return self.array[-1]
 
-    # Pop'ает элемент из стека
-    def pop(self):
+    def pop(self) -> int | str:
+        """Pop'ает элемент из стека"""
         if not self.isEmpty():
             self.top -= 1
             return self.array.pop()
         else:
             return "$"
 
-    # Помещает элемент в стек
-    def push(self, op):
+    def push(self, op: str) -> None:
+        """Помещает элемент в стек"""
         self.top += 1
         self.array.append(op)
 
-    # Вспомогательная функция для проверки, что задан символ - операнд
-    def isOperand(self, ch):
-        return ch.isdigit()
+    def isOperand(self, ch: str) -> bool:
+        """Вспомогательная функция для проверки, что задан символ - операнд"""
+        try:
+            return str(abs(int(ch))).isdigit()
+        except ValueError:
+            return False
 
-    # Проверьте, строго ли приоритет оператора меньше вершины стека или нет.
-    def notGreater(self, i):
+    def notGreater(self, i: int) -> bool:
+        """Проверьте, строго ли приоритет оператора меньше вершины стека или нет."""
         try:
             a = self.precedence[i]
             b = self.precedence[self.peek()]
@@ -44,8 +49,8 @@ class Conversion:
         except KeyError:
             return False
 
-    # Основная функция, которая преобразует данное инфиксное выражение в постфиксное выражение.
-    def infixToPostfix(self, exp):
+    def infixToPostfix(self, exp: str) -> list:
+        """Функция для перевода инфиксного выражения в постфиксное"""
 
         # Перебирает выражения для преобразования
         for i in exp.split():
@@ -79,4 +84,76 @@ class Conversion:
             self.output.append(self.pop())
 
         # print("".join(self.output))
-        print(self.output)
+        return self.output
+
+
+all_ops: dict[str, Callable[[list], int]] = {}
+
+
+def binary_op(token: str):
+    """Декоратор для бинарных операций"""
+    def make_binop(func: Callable[[int, int], int]) -> Callable[[list], int]:
+        def redef(stack: list) -> int:
+            if len(stack) < 2:
+                raise ValueError(f"Недостаточно операндов на стаке: len = {len(stack)}")
+
+            b = stack.pop()
+            a = stack.pop()
+            result = func(a, b)
+
+            stack.append(result)
+
+            return result
+
+        all_ops[token] = redef
+        return redef
+
+    return make_binop
+
+
+@binary_op('+')
+def add(a, b):
+    return a + b
+
+
+@binary_op('-')
+def sub(a, b):
+    return a - b
+
+
+@binary_op('*')
+def mul(a, b):
+    return a * b
+
+
+@binary_op('/')
+def div(a, b):
+    return a // b
+
+
+@binary_op('%')
+def mod(a, b):
+    return a % b
+
+
+@binary_op('^')
+def power(a, b):
+    return a ** b
+
+
+def execute_program(program: list) -> int:
+    stack = []
+    for token in program:
+        operation = all_ops.get(token, None)
+        if operation is not None:
+            operation(stack)
+        else:
+            try:
+                stack.append(int(token))
+            except ValueError:
+                raise ValueError(f"{token!r} - неизвестная операция или не целое число")
+
+    if len(stack) != 1:
+        raise ValueError(f"Ошибка! К концу вычислений на стеке осталось не одно число: {stack}")
+
+    return stack.pop()
